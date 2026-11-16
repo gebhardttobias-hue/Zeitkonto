@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Zeitkonto"><meta name="theme-color" content="#000000"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" href="icon-192.png">
+<title>Zeitkonto</title>
+<style>
+:root { color-scheme: light; }
+[hidden] { display: none !important; }
+/* Layout: ruhige Karten auf hellgrauem Grund, runde Pillen, schwebende Tab-Leiste unten */
+:root {
+  --bg: #f1f1f1;
+  --card: #ffffff;
+  --fg: #0b0b0b;
+  --on-fg: #ffffff;
+  --mute: #7a7a7a;
+  --line: rgba(0, 0, 0, .09);
+  --soft: #ececec;
+  --font: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --mono: var(--font);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000; --card: #141414; --fg: #f5f5f5; --on-fg: #0b0b0b; --mute: #8e8e8e; --line: rgba(255, 255, 255, .1); --soft: #242424;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #000000; --card: #141414; --fg: #f5f5f5; --on-fg: #0b0b0b; --mute: #8e8e8e; --line: rgba(255, 255, 255, .1); --soft: #242424;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.4;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px 120px;
+}
+#app { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+h1 { font-size: 32px; font-weight: 800; letter-spacing: -.03em; margin: 0; line-height: 1.1; }
+h2 { font-size: 13px; font-weight: 700; color: var(--mute); margin: 0 0 10px 4px; letter-spacing: .01em; }
+.card h2 { margin: 0 0 0 0; }
+.top { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 4px 0; }
+.top small { color: var(--mute); font-size: 13px; font-weight: 700; background: var(--card); border-radius: 999px; padding: 6px 12px; }
+.num { font-variant-numeric: tabular-nums; }
+section { min-width: 0; }
+.card { background: var(--card); border-radius: 28px; padding: 20px; display: flex; flex-direction: column; gap: 18px; }
+label.l { display: block; font-size: 13px; font-weight: 700; color: var(--mute); margin: 0 0 8px 2px; }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; background: var(--soft); border-radius: 999px; padding: 4px; }
+.seg button { border: 0; border-radius: 999px; background: transparent; color: var(--fg); font: 700 14px var(--font); padding: 12px 8px; cursor: pointer; transition: background .15s, color .15s; }
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--on-fg); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { border: 0; border-radius: 999px; background: var(--soft); color: var(--fg); font: 700 14px var(--font); padding: 11px 16px; cursor: pointer; transition: background .15s, color .15s; }
+.chip[aria-pressed="true"] { background: var(--fg); color: var(--on-fg); }
+input, select { width: 100%; font: 600 16px var(--font); color: var(--fg); background: var(--soft); border: 0; border-radius: 16px; padding: 14px 16px; min-width: 0; appearance: none; -webkit-appearance: none; }
+select { background-image: linear-gradient(45deg, transparent 50%, var(--fg) 50%), linear-gradient(135deg, var(--fg) 50%, transparent 50%); background-position: calc(100% - 22px) 55%, calc(100% - 16px) 55%; background-size: 6px 6px, 6px 6px; background-repeat: no-repeat; padding-right: 40px; }
+input::placeholder { color: var(--mute); font-weight: 500; }
+.row { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+.row3 { display: grid; gap: 10px; grid-template-columns: 2fr 1fr 1fr; }
+.btn { border: 0; border-radius: 999px; background: var(--fg); color: var(--on-fg); font: 800 16px var(--font); padding: 17px 20px; cursor: pointer; width: 100%; transition: transform .1s; }
+.btn:active { transform: scale(.98); }
+.btn.alt { background: var(--soft); color: var(--fg); }
+.btn.big { padding: 24px 20px; font-size: 20px; letter-spacing: -.01em; }
+.btn[disabled] { opacity: .3; cursor: not-allowed; }
+.mini { border: 0; border-radius: 999px; background: var(--soft); color: var(--fg); font: 700 13px var(--font); padding: 8px 14px; cursor: pointer; }
+.mini.hot { background: var(--fg); color: var(--on-fg); }
+.clock { font-weight: 800; font-size: clamp(48px, 17vw, 80px); letter-spacing: -.04em; line-height: 1; text-align: center; padding: 10px 0 2px; font-variant-numeric: tabular-nums; }
+.live { text-align: center; color: var(--mute); font-size: 14px; font-weight: 600; }
+.live b { color: var(--fg); }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--fg); margin-right: 8px; animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .2; } }
+@media (prefers-reduced-motion: reduce) { .dot { animation: none; } .btn, .seg button, .chip { transition: none; } }
+.list { list-style: none; margin: 0; padding: 4px 18px; background: var(--card); border-radius: 24px; }
+.list li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.list li:last-child { border-bottom: 0; }
+.card .list { padding: 0; background: transparent; border-radius: 0; }
+.list .main { min-width: 0; }
+.list .t { font-weight: 700; overflow-wrap: anywhere; }
+.list .s { color: var(--mute); font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
+.list .r { display: flex; align-items: center; gap: 10px; flex: none; }
+.list .r .num { font-size: 15px; }
+.big-num { font-weight: 800; font-size: 56px; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.bars { display: flex; flex-direction: column; gap: 16px; background: var(--card); border-radius: 24px; padding: 20px; }
+.bar .h { display: flex; justify-content: space-between; gap: 12px; font-weight: 700; margin-bottom: 8px; }
+.bar .h span:first-child { overflow-wrap: anywhere; }
+.bar .track { height: 12px; border-radius: 999px; background: var(--soft); overflow: hidden; }
+.bar .fill { height: 100%; background: var(--fg); border-radius: 999px; }
+.scroll { overflow-x: auto; background: var(--card); border-radius: 24px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { padding: 13px 14px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
+th:first-child, td:first-child { text-align: left; position: sticky; left: 0; background: var(--card); }
+th { font-size: 12px; font-weight: 700; color: var(--mute); }
+tr:last-child td { border-bottom: 0; }
+tfoot td { font-weight: 800; border-top: 1px solid var(--line); }
+td.tot { font-weight: 800; }
+.hero { background: var(--card); border-radius: 28px; padding: 22px 20px; }
+.hero .note { margin-top: 8px; }
+.empty { color: var(--mute); padding: 20px; text-align: center; background: var(--card); border-radius: 24px; font-weight: 500; }
+.note { color: var(--mute); font-size: 13px; font-weight: 500; }
+nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; padding: 0 max(16px, env(safe-area-inset-left, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)); pointer-events: none; }
+nav .in { pointer-events: auto; max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; background: var(--fg); border-radius: 999px; padding: 6px; box-shadow: 0 8px 30px rgba(0, 0, 0, .22); }
+nav button { border: 0; border-radius: 999px; background: transparent; color: var(--on-fg); font: 700 12px var(--font); padding: 13px 2px; cursor: pointer; opacity: .6; transition: opacity .15s, background .15s; }
+nav button[aria-current="page"] { background: var(--on-fg); color: var(--fg); opacity: 1; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); background: var(--card); color: var(--fg); font-weight: 700; padding: 12px 18px; border-radius: 999px; box-shadow: 0 8px 30px rgba(0, 0, 0, .25); z-index: 9; max-width: calc(100% - 32px); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--fg); outline-offset: 2px; }
+</style></head><body>
+
+<div id="app"></div>
+<nav aria-label="Hauptmenü"><div class="in" id="nav"></div></nav>
+<div id="toast" class="toast" hidden role="status"></div>
+
+<script>
+(function () {
+  var ROLES = ["Vorstand", "Sportlicher Leiter"];
+  var KEY = "zeitkonto-v1";
+  function defDepts() {
+    var o = {};
+    o["Vorstand"] = ["Fußball", "Gymnastik", "Oldtimer", "Dart", "Multisport"];
+    o["Sportlicher Leiter"] = ["SG Wind"];
+    return o;
+  }
+  function normDepts(d) {
+    if (!d || Array.isArray(d)) return defDepts();
+    var o = {}, f = defDepts();
+    ROLES.forEach(function (r) { o[r] = Array.isArray(d[r]) ? d[r] : f[r]; });
+    return o;
+  }
+  function deptsFor(role) { return cfg.depts[role] || []; }
+
+  var noStore = false;
+  var cfg = { depts: defDepts(), running: null };
+  var entries = [];
+  var mode = "local";      // "local" | "cloud"
+  var col = null;
+  var ui = { tab: "track", role: ROLES[0], dept: null, note: "", period: "month", mRole: ROLES[0], mDept: null, mDate: todayStr(), mH: "", mM: "", mNote: "", delId: null, newDept: {} };
+
+  function $(s) { return document.querySelector(s); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function todayStr() { var d = new Date(); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function hm(sec) { var m = Math.round(sec / 60); return Math.floor(m / 60) + ":" + pad(m % 60); }
+  function hms(sec) { sec = Math.max(0, Math.floor(sec)); return pad(Math.floor(sec / 3600)) + ":" + pad(Math.floor(sec / 60) % 60) + ":" + pad(sec % 60); }
+  function dec(sec) { return (sec / 3600).toFixed(2).replace(".", ","); }
+  function dateLabel(ms) { return new Date(ms).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "2-digit" }); }
+
+  var toastTimer = null;
+  function toast(t) {
+    var el = $("#toast"); el.textContent = t; el.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { el.hidden = true; }, 2600);
+  }
+
+  /* ---------- Speicher ---------- */
+  function loadLocal() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return;
+      var d = JSON.parse(raw);
+      if (d.cfg) cfg = { depts: normDepts(d.cfg.depts), running: d.cfg.running || null };
+      if (Array.isArray(d.entries)) entries = d.entries;
+    } catch (e) {}
+  }
+  function saveLocal() {
+    try { localStorage.setItem(KEY, JSON.stringify({ cfg: cfg, entries: entries })); } catch (e) { if (!noStore) { noStore = true; toast("Speichern im Browser nicht möglich"); } }
+  }
+  var q = Promise.resolve();
+  function enqueue(fn) { q = q.then(fn).catch(function () { toast("Speichern fehlgeschlagen"); }); }
+  function persistCfg() {
+    saveLocal();
+    if (mode === "cloud" && col) { var c = JSON.parse(JSON.stringify(cfg)); enqueue(function () { return col.doc("cfg").set(c); }); }
+  }
+  function persistEntry(e) {
+    saveLocal();
+    if (mode === "cloud" && col) enqueue(function () { return col.doc(e.id).set(e); });
+  }
+  function removeEntry(id) {
+    entries = entries.filter(function (e) { return e.id !== id; });
+    saveLocal();
+    if (mode === "cloud" && col) enqueue(function () { return col.doc(id).delete(); });
+  }
+
+  /* ---------- Zeitraum ---------- */
+  function periodStart() {
+    var d = new Date();
+    if (ui.period === "week") { var wd = (d.getDay() + 6) % 7; return new Date(d.getFullYear(), d.getMonth(), d.getDate() - wd).getTime(); }
+    if (ui.period === "month") return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+    if (ui.period === "year") return new Date(d.getFullYear(), 0, 1).getTime();
+    return 0;
+  }
+  function filtered() { var s = periodStart(); return entries.filter(function (e) { return e.start >= s; }); }
+  function sorted(list) { return list.slice().sort(function (a, b) { return b.start - a.start; }); }
+
+  /* ---------- Aktionen ---------- */
+  function startTimer() {
+    if (!ui.dept) return;
+    cfg.running = { start: Date.now(), role: ui.role, dept: ui.dept, note: ui.note.trim() };
+    ui.note = ""; persistCfg(); render();
+  }
+  function stopTimer() {
+    var r = cfg.running; if (!r) return;
+    var sec = Math.max(60, Math.round((Date.now() - r.start) / 1000));
+    var e = { id: "e" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), role: r.role, dept: r.dept, start: r.start, sec: sec, note: r.note || "" };
+    entries.push(e); cfg.running = null;
+    persistEntry(e); persistCfg(); render();
+    toast("Gespeichert: " + hm(sec) + " h");
+  }
+  function addManual() {
+    var h = parseInt(ui.mH || "0", 10) || 0, m = parseInt(ui.mM || "0", 10) || 0;
+    var sec = (h * 60 + m) * 60;
+    if (sec <= 0 || !ui.mDept || !ui.mDate) { toast("Bitte Abteilung, Datum und Dauer angeben"); return; }
+    var p = ui.mDate.split("-").map(Number);
+    var e = { id: "e" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), role: ui.mRole, dept: ui.mDept, start: new Date(p[0], p[1] - 1, p[2], 12, 0, 0).getTime(), sec: sec, note: ui.mNote.trim() };
+    entries.push(e); persistEntry(e);
+    ui.mH = ""; ui.mM = ""; ui.mNote = ""; render(); toast("Eintrag gespeichert");
+  }
+  function addDept(role) {
+    var n = (ui.newDept[role] || "").trim();
+    if (!n) return;
+    var list = deptsFor(role);
+    if (list.some(function (d) { return d.toLowerCase() === n.toLowerCase(); })) { toast("Gibt es schon"); return; }
+    cfg.depts[role] = list.concat([n]); ui.newDept[role] = ""; persistCfg(); render();
+  }
+  function saveFile(name, text, type) {
+    try {
+      var url = URL.createObjectURL(new Blob([text], { type: type }));
+      var a = document.createElement("a"); a.href = url; a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+      toast("Datei erstellt");
+    } catch (e) { toast("Speichern der Datei nicht möglich"); }
+  }
+  function exportCsv() {
+    var rows = [["Datum", "Funktion", "Abteilung", "Stunden", "Notiz"]];
+    sorted(entries).forEach(function (e) {
+      var d = new Date(e.start);
+      rows.push([d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()), e.role, e.dept, dec(e.sec), e.note || ""]);
+    });
+    var csv = "﻿" + rows.map(function (r) { return r.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(";"); }).join("\r\n");
+    saveFile("zeitkonto.csv", csv, "text/csv;charset=utf-8");
+  }
+  function exportBackup() {
+    saveFile("zeitkonto-sicherung.json", JSON.stringify({ v: 1, cfg: cfg, entries: entries }), "application/json");
+  }
+  function importBackup(file) {
+    if (!file) return;
+    var rd = new FileReader();
+    rd.onload = function () {
+      try {
+        var d = JSON.parse(rd.result);
+        if (!d || !Array.isArray(d.entries)) throw new Error("x");
+        var have = {}; entries.forEach(function (e) { have[e.id] = 1; });
+        var add = d.entries.filter(function (e) { return e && e.id && !have[e.id] && typeof e.sec === "number" && typeof e.start === "number"; });
+        entries = entries.concat(add);
+        if (d.cfg && d.cfg.depts) cfg.depts = normDepts(d.cfg.depts);
+        saveLocal(); render(); toast(add.length + " Einträge übernommen");
+      } catch (e) { toast("Datei nicht lesbar"); }
+    };
+    rd.readAsText(file);
+  }
+
+    /* ---------- Ansichten ---------- */
+  function chips(list, sel, act) {
+    return '<div class="chips">' + list.map(function (d) { return '<button class="chip" data-act="' + act + '" data-v="' + esc(d) + '" aria-pressed="' + (d === sel) + '">' + esc(d) + "</button>"; }).join("") + "</div>";
+  }
+  function seg(list, sel, act) {
+    return '<div class="seg">' + list.map(function (d) { return '<button data-act="' + act + '" data-v="' + esc(d.v) + '" aria-pressed="' + (d.v === sel) + '">' + esc(d.t) + "</button>"; }).join("") + "</div>";
+  }
+  function entryLi(e, withDel) {
+    var del = "";
+    if (withDel) {
+      del = ui.delId === e.id
+        ? '<button class="mini hot" data-act="delyes" data-v="' + esc(e.id) + '">Wirklich?</button>'
+        : '<button class="mini" data-act="del" data-v="' + esc(e.id) + '" aria-label="Eintrag löschen">Löschen</button>';
+    }
+    return '<li><div class="main"><div class="t">' + esc(e.dept) + " · " + esc(e.role) + '</div><div class="s">' + esc(dateLabel(e.start)) + (e.note ? " · " + esc(e.note) : "") + '</div></div><div class="r"><span class="num"><b>' + hm(e.sec) + "</b> h</span>" + del + "</div></li>";
+  }
+
+  function viewTrack() {
+    var h = "";
+    var r = cfg.running;
+    if (r) {
+      h += '<section class="card"><div class="live"><span class="dot"></span>Läuft seit ' + new Date(r.start).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) + ' Uhr</div>' +
+        '<div class="clock" id="clock">' + hms((Date.now() - r.start) / 1000) + "</div>" +
+        '<div class="live"><b>' + esc(r.dept) + "</b> · " + esc(r.role) + (r.note ? " · " + esc(r.note) : "") + "</div>" +
+        '<button class="btn big" data-act="stop">Stopp</button></section>';
+    } else {
+      h += '<section class="card"><div><label class="l">Funktion</label>' + seg(ROLES.map(function (x) { return { v: x, t: x }; }), ui.role, "role") + "</div>" +
+        '<div><label class="l">Abteilung</label>' + chips(deptsFor(ui.role), ui.dept, "dept") + "</div>" +
+        '<div><label class="l" for="note">Notiz (optional)</label><input id="note" type="text" placeholder="z. B. Sitzung, Trainersuche" value="' + esc(ui.note) + '" maxlength="80"></div>' +
+        '<button class="btn big" data-act="start"' + (ui.dept ? "" : " disabled") + ">Start</button></section>";
+    }
+    var t0 = new Date(); t0.setHours(0, 0, 0, 0);
+    var today = entries.filter(function (e) { return e.start >= t0.getTime(); });
+    var sum = today.reduce(function (a, e) { return a + e.sec; }, 0);
+    h += '<section><h2>Heute · <span class="num">' + hm(sum) + " h</span></h2>" +
+      (today.length ? '<ul class="list">' + sorted(today).map(function (e) { return entryLi(e, false); }).join("") + "</ul>" : '<div class="empty">Heute noch nichts erfasst.</div>') + "</section>";
+
+    h += '<section class="card"><h2 style="margin:0">Nachtragen</h2>' +
+      '<div class="row"><div><label class="l" for="mRole">Funktion</label><select id="mRole">' + ROLES.map(function (x) { return '<option' + (x === ui.mRole ? " selected" : "") + ">" + esc(x) + "</option>"; }).join("") + "</select></div>" +
+      '<div><label class="l" for="mDept">Abteilung</label><select id="mDept">' + deptsFor(ui.mRole).map(function (x) { return '<option' + (x === ui.mDept ? " selected" : "") + ">" + esc(x) + "</option>"; }).join("") + "</select></div></div>" +
+      '<div class="row3"><div><label class="l" for="mDate">Datum</label><input id="mDate" type="date" value="' + esc(ui.mDate) + '"></div>' +
+      '<div><label class="l" for="mH">Std</label><input id="mH" type="number" inputmode="numeric" min="0" max="24" placeholder="0" value="' + esc(ui.mH) + '"></div>' +
+      '<div><label class="l" for="mM">Min</label><input id="mM" type="number" inputmode="numeric" min="0" max="59" placeholder="0" value="' + esc(ui.mM) + '"></div></div>' +
+      '<div><label class="l" for="mNote">Notiz (optional)</label><input id="mNote" type="text" value="' + esc(ui.mNote) + '" maxlength="80"></div>' +
+      '<button class="btn alt" data-act="addManual">Eintrag speichern</button></section>';
+    return h;
+  }
+
+  function viewStats() {
+    var list = filtered();
+    var total = list.reduce(function (a, e) { return a + e.sec; }, 0);
+    var h = seg([{ v: "week", t: "Woche" }, { v: "month", t: "Monat" }, { v: "year", t: "Jahr" }, { v: "all", t: "Gesamt" }], ui.period, "period");
+    h += '<section class="hero"><h2 style="margin-left:0">Gesamtzeit</h2><div class="big-num">' + hm(total) + ' <span style="font-size:20px">h</span></div><div class="note">' + list.length + " Einträge · " + dec(total) + " Stunden dezimal</div></section>";
+    if (!list.length) return h + '<div class="empty">In diesem Zeitraum gibt es noch keine Einträge.</div>';
+
+    var byRole = {}, byDept = {}, cell = {};
+    list.forEach(function (e) {
+      byRole[e.role] = (byRole[e.role] || 0) + e.sec;
+      byDept[e.dept] = (byDept[e.dept] || 0) + e.sec;
+      cell[e.role + "\u0000" + e.dept] = (cell[e.role + "\u0000" + e.dept] || 0) + e.sec;
+    });
+    function bars(map, keys) {
+      var max = Math.max.apply(null, keys.map(function (k) { return map[k] || 0; })) || 1;
+      return '<div class="bars">' + keys.map(function (k) {
+        var v = map[k] || 0;
+        return '<div class="bar"><div class="h"><span>' + esc(k) + '</span><span class="num">' + hm(v) + ' h</span></div><div class="track"><div class="fill" style="width:' + Math.round(v / max * 100) + '%"></div></div></div>';
+      }).join("") + "</div>";
+    }
+    h += "<section><h2>Nach Funktion</h2>" + bars(byRole, ROLES) + "</section>";
+    var dk = Object.keys(byDept).sort(function (a, b) { return byDept[b] - byDept[a]; });
+    h += "<section><h2>Nach Abteilung</h2>" + bars(byDept, dk) + "</section>";
+    h += '<section><h2>Aufgliederung</h2><div class="scroll"><table><thead><tr><th>Abteilung</th>' + ROLES.map(function (r) { return "<th>" + esc(r) + "</th>"; }).join("") + "<th>Summe</th></tr></thead><tbody>" +
+      dk.map(function (d) {
+        return "<tr><td>" + esc(d) + "</td>" + ROLES.map(function (r) { var v = cell[r + "\u0000" + d]; return '<td class="num">' + (v ? hm(v) : "–") + "</td>"; }).join("") + '<td class="num tot">' + hm(byDept[d]) + "</td></tr>";
+      }).join("") +
+      '</tbody><tfoot><tr><td>Summe</td>' + ROLES.map(function (r) { return '<td class="num">' + hm(byRole[r] || 0) + "</td>"; }).join("") + '<td class="num">' + hm(total) + "</td></tr></tfoot></table></div></section>";
+    return h;
+  }
+
+  function viewLog() {
+    var list = sorted(entries);
+    if (!list.length) return '<div class="empty">Noch keine Einträge. Starte den Timer oder trage Zeit nach.</div>';
+    return '<section><h2>Alle Einträge · ' + list.length + '</h2><ul class="list">' + list.map(function (e) { return entryLi(e, true); }).join("") + "</ul></section>";
+  }
+
+  function viewSettings() {
+    var h = "";
+    ROLES.forEach(function (role, i) {
+      h += '<section class="card"><h2 style="margin:0">Abteilungen · ' + esc(role) + '</h2><ul class="list">' +
+        deptsFor(role).map(function (d) { return '<li><div class="t">' + esc(d) + '</div><button class="mini" data-act="rmdept" data-r="' + esc(role) + '" data-v="' + esc(d) + '">Entfernen</button></li>'; }).join("") + "</ul>" +
+        '<div class="row" style="grid-template-columns:1fr auto"><input id="newDept-' + i + '" type="text" placeholder="Neue Abteilung" maxlength="40" value="' + esc(ui.newDept[role] || "") + '" aria-label="Neue Abteilung für ' + esc(role) + '"><button class="mini" data-act="adddept" data-r="' + esc(role) + '" style="padding:0 16px">Hinzufügen</button></div>' +
+        '<div class="note">Bereits erfasste Zeiten bleiben erhalten, wenn du eine Abteilung entfernst.</div></section>';
+    });
+h += '<section class="card"><h2 style="margin:0">Export und Sicherung</h2><button class="btn alt" data-act="csv">Als CSV speichern</button><button class="btn alt" data-act="backup">Sicherung speichern</button><button class="btn alt" data-act="pickimp">Sicherung einspielen</button><input id="imp" type="file" accept=".json,application/json" hidden><div class="note">CSV öffnet sich direkt in Excel. Die Sicherung brauchst du, wenn du das Gerät wechselst oder den Browser-Speicher leerst.</div></section>';
+    h += '<div class="note">' + (noStore ? "Achtung: Dieser Browser erlaubt kein Speichern. Einträge gehen beim Schließen verloren." : "Alles liegt nur auf diesem Gerät und funktioniert ohne Internet.") + "</div>";
+    return h;
+  }
+
+  var TABS = [{ v: "track", t: "Erfassen" }, { v: "stats", t: "Auswertung" }, { v: "log", t: "Verlauf" }, { v: "settings", t: "Mehr" }];
+  function render() {
+    if (!ui.dept || deptsFor(ui.role).indexOf(ui.dept) < 0) ui.dept = deptsFor(ui.role)[0] || null;
+    if (!ui.mDept || deptsFor(ui.mRole).indexOf(ui.mDept) < 0) ui.mDept = deptsFor(ui.mRole)[0] || null;
+    var body = ui.tab === "track" ? viewTrack() : ui.tab === "stats" ? viewStats() : ui.tab === "log" ? viewLog() : viewSettings();
+    var title = TABS.filter(function (t) { return t.v === ui.tab; })[0].t;
+    $("#app").innerHTML = '<div class="top"><h1>Zeitkonto</h1><small>' + esc(title) + "</small></div>" + body;
+    $("#nav").innerHTML = TABS.map(function (t) { return '<button data-act="tab" data-v="' + t.v + '"' + (t.v === ui.tab ? ' aria-current="page"' : "") + ">" + t.t + "</button>"; }).join("");
+  }
+
+  /* ---------- Events ---------- */
+  document.addEventListener("click", function (ev) {
+    var b = ev.target.closest("[data-act]"); if (!b) return;
+    var a = b.getAttribute("data-act"), v = b.getAttribute("data-v");
+    if (a === "tab") { ui.tab = v; ui.delId = null; render(); window.scrollTo(0, 0); }
+    else if (a === "role") { ui.role = v; ui.dept = null; render(); }
+    else if (a === "dept") { ui.dept = v; render(); }
+    else if (a === "start") startTimer();
+    else if (a === "stop") stopTimer();
+    else if (a === "addManual") addManual();
+    else if (a === "period") { ui.period = v; render(); }
+    else if (a === "del") { ui.delId = v; render(); }
+    else if (a === "delyes") { ui.delId = null; removeEntry(v); render(); toast("Gelöscht"); }
+    else if (a === "rmdept") { var rr = b.getAttribute("data-r"); cfg.depts[rr] = deptsFor(rr).filter(function (d) { return d !== v; }); persistCfg(); render(); }
+    else if (a === "adddept") addDept(b.getAttribute("data-r"));
+    else if (a === "csv") exportCsv();
+    else if (a === "backup") exportBackup();
+    else if (a === "pickimp") { var im = $("#imp"); if (im) im.click(); }
+  });
+  document.addEventListener("input", function (ev) {
+    var id = ev.target.id;
+    if (id === "note") ui.note = ev.target.value;
+    else if (id === "mNote") ui.mNote = ev.target.value;
+    else if (id === "mH") ui.mH = ev.target.value;
+    else if (id === "mM") ui.mM = ev.target.value;
+    else if (id === "mDate") ui.mDate = ev.target.value;
+    else if (id === "mRole") { ui.mRole = ev.target.value; ui.mDept = null; render(); }
+    else if (id === "mDept") ui.mDept = ev.target.value;
+    else if (id.indexOf("newDept-") === 0) ui.newDept[ROLES[parseInt(id.slice(8), 10)]] = ev.target.value;
+  });
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Enter" && ev.target.id && ev.target.id.indexOf("newDept-") === 0) { ev.preventDefault(); addDept(ROLES[parseInt(ev.target.id.slice(8), 10)]); }
+  });
+  document.addEventListener("change", function (ev) {
+    if (ev.target.id === "imp") { importBackup(ev.target.files && ev.target.files[0]); ev.target.value = ""; }
+  });
+  setInterval(function () {
+    var c = $("#clock");
+    if (c && cfg.running) c.textContent = hms((Date.now() - cfg.running.start) / 1000);
+  }, 1000);
+
+  /* ---------- Start ---------- */
+  loadLocal();
+  render();
+
+})();
+</script>
+<script>if ("serviceWorker" in navigator) { window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); }); }</script>
+</body></html>
